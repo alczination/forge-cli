@@ -2,51 +2,48 @@ package forge.cli;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Scanner;
 import java.util.regex.*;
 
-@Command(name = "logs", description = "DESCRIPTION LOG COMMAND")
+@Command(name = "logs", description = "View, filter and analyze application log files.")
 public class LogsCommand implements Runnable {
     static Pattern LOG_PATTERN = Pattern.compile(
             "^(\\d{4}-\\d{2}-\\d{2}) (\\d{2}:\\d{2}:\\d{2}\\.\\d{3}) \\[(.+?)\\] (INFO|WARN|ERROR|DEBUG) (.+)$"
     );
 
-        @Option(names = {"--file"}, description = "DESCRIPTION FILE INPUT")
+        @Option(names = {"--file"}, required = true, description = "The path to the log file to be processed.")
         private File filePath;
 
-        @Option(names = {"--check"}, description = "DESCRIPTION CHECK")
+        @Option(names = {"--check"}, description = "Perform a validation check on the log file structure")
         private boolean check = false;
         private String compare;
 
-        @Option(names = {"--level"}, description = "DESCRIPTION LEVEL")
+        @Option(names = {"--level"}, description = "Filter logs by severity level (e.g. INFO, WARN, ERROR, DEBUG)")
         private String filterLevel;
 
-        @Option(names = {"--stats"}, description = "DESCRIPTION STATS")
-        private boolean stats;
+        @Option(names = {"--since"}, description = "Filter logs after a specific timestamp. Formats: 'yyyy-MM-dd' or 'yyyy-MM-ddTHH:mm:ss'")
+        private String since;
 
         @Override
         public void run() {
-            System.out.println("Hello from logs!");
-            if(filePath != null) {
-            System.out.println("Selected file: " + filePath);
-            // readData(filePath);
-            }
-            if(compare != null) {
+            if (filePath != null)
+                System.out.println("Selected file: " + filePath);
+            if (compare != null) {
                 System.out.println("Selected compare: " + compare);
                 compareData(filePath, compare);
-            }
-            if(filterLevel != null) {
+            } else if (filterLevel != null || since != null) {
                 System.out.println("Selected filter level: " + filterLevel);
-                filterLogs(filePath, filterLevel);
+                filterLogs(filePath, filterLevel, since);
             }
         }
 
@@ -82,11 +79,28 @@ public class LogsCommand implements Runnable {
             }
         }
 
-        public static void filterLogs(File file, String filterLevel) {
+        public static void filterLogs(File file, String filterLevel, String since) {
+            LocalDateTime sinceDateTime = null;
+            if (since != null) {
+                try {
+                        // Date + Hour
+                    sinceDateTime = LocalDateTime.parse(since, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+                } catch (Exception e1) {
+                    try {
+                        // Date
+                        LocalDate date = LocalDate.parse(since, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                        sinceDateTime = date.atStartOfDay();
+                    }
+                         catch (Exception e2) {
+                            System.err.println("Error: invalid time format. Use 'yyyy-MM-ddTHH:mm:ss' or 'yyyy-MM-dd'.'");
+                            return;
+                        }
+                    }
+                }
             List<String> VALID_LEVELS = List.of("INFO", "WARN", "ERROR", "DEBUG");
-            if (!VALID_LEVELS.contains(filterLevel.toUpperCase())) {
-                System.out.println("Invalid filter level: " + filterLevel);
-                System.out.println("Valid levels: " + VALID_LEVELS);
+            if (filterLevel != null && !VALID_LEVELS.contains(filterLevel.toUpperCase())) {
+                System.err.println("Invalid filter level: " + filterLevel);
+                System.err.println("Valid levels: " + VALID_LEVELS);
                 return;
             }
             try (BufferedReader reader = Files.newBufferedReader(file.toPath())) {
@@ -94,18 +108,19 @@ public class LogsCommand implements Runnable {
                 while ((line = reader.readLine()) != null) {
                     Matcher m = LOG_PATTERN.matcher(line);
                     if (m.matches()) {
-                        String date    = m.group(1); // "2024-03-01"
-                        String time    = m.group(2); // "08:01:23.345"
-                        String thread  = m.group(3); // "http-thread-3"
-                        String level   = m.group(4); // "ERROR"
-                        if (level.equals(filterLevel.toUpperCase())) {
-                            System.out.println(line);
+                        String thread  = m.group(3);
+                        String level   = m.group(4);
+                        if (sinceDateTime != null) {
+                            LocalDateTime logDateTime = LocalDateTime.parse(m.group(1) + " " + m.group(2), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
+                            if (logDateTime.isBefore(sinceDateTime)) continue;
                         }
-                        String message = m.group(5); // "com.forge.api.AuthController - Account locked"
+                        if (filterLevel == null || level.equals(filterLevel.toUpperCase()))
+                            System.out.println(line);
+                        String message = m.group(5);
                     }
                 }
             } catch (IOException e) {
-                System.out.println("Error: cannot read file: " + file.getName());
+                System.err.println("Error: cannot read file: " + file.getName());
             }
         }
 }

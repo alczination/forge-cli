@@ -1,0 +1,84 @@
+
+2024-01-01 08:00:12.345 [main] INFO  com.forge.Application - Starting Forge Application v1.0.0
+2024-01-01 08:00:12.345 [main] INFO  com.forge.Application - Starting Forge Application v1.0.0
+2024-01-01 08:00:12.345 [main] INFO  com.forge.Application - Starting Forge Application v1.0.0
+2024-01-01 08:00:12.345 [main] INFO  com.forge.Application - Starting Forge Application v1.0.0
+2024-02-01 08:00:12.345 [main] INFO  com.forge.Application - Starting Forge Application v1.0.0
+
+2024-03-01 08:00:12.345 [main] INFO  com.forge.Application - Starting Forge Application v1.0.0
+2024-03-01 08:00:12.412 [main] INFO  com.forge.Application - JVM version: 17.0.9, OS: Linux 5.15.0
+2024-03-01 08:00:12.899 [main] INFO  com.forge.config.ConfigLoader - Loading configuration from /etc/forge/config.yml
+2024-03-01 08:00:13.102 [main] INFO  com.forge.db.DatabasePool - Initializing connection pool (max=10, min=2)
+2024-03-01 08:00:13.445 [main] INFO  com.forge.db.DatabasePool - Database connection established: jdbc:postgresql://localhost:5432/forgedb
+2024-03-01 08:00:13.780 [main] INFO  com.forge.Application - Application started successfully in 1.435s
+
+2024-03-01 08:01:05.001 [http-thread-1] INFO  com.forge.api.UserController - GET /api/users?page=0&size=20 - 200 OK (34ms)
+2024-03-01 08:01:07.234 [http-thread-2] INFO  com.forge.api.ProjectController - GET /api/projects/42 - 200 OK (12ms)
+2024-03-01 08:01:09.567 [http-thread-1] INFO  com.forge.api.UserController - POST /api/users - 201 Created (88ms)
+2024-03-01 08:01:11.890 [http-thread-3] WARN  com.forge.api.AuthController - Failed login attempt for user: admin@example.com (attempt 1/5)
+2024-03-01 08:01:14.123 [http-thread-3] WARN  com.forge.api.AuthController - Failed login attempt for user: admin@example.com (attempt 2/5)
+2024-03-01 08:01:15.456 [http-thread-2] INFO  com.forge.api.ProjectController - PUT /api/projects/42 - 200 OK (45ms)
+2024-03-01 08:01:18.789 [http-thread-3] WARN  com.forge.api.AuthController - Failed login attempt for user: admin@example.com (attempt 3/5)
+2024-03-01 08:01:20.012 [http-thread-4] INFO  com.forge.service.FileService - Processing batch upload: 14 files, total size: 23.4 MB
+2024-03-01 08:01:23.345 [http-thread-3] ERROR com.forge.api.AuthController - Account locked after 5 failed login attempts: admin@example.com
+2024-03-01 08:01:23.346 [http-thread-3] ERROR com.forge.security.SecurityAudit - SECURITY ALERT: Brute force detected from IP 192.168.1.105
+
+2024-03-01 08:02:00.000 [scheduler-1] INFO  com.forge.scheduler.CleanupJob - Starting scheduled cleanup task
+2024-03-01 08:02:00.234 [scheduler-1] INFO  com.forge.scheduler.CleanupJob - Deleted 47 expired session tokens
+2024-03-01 08:02:00.567 [scheduler-1] INFO  com.forge.scheduler.CleanupJob - Cleanup completed in 567ms
+
+2024-03-01 08:03:11.100 [http-thread-2] INFO  com.forge.api.ProjectController - GET /api/projects - 200 OK (21ms)
+2024-03-01 08:03:14.233 [http-thread-1] WARN  com.forge.db.DatabasePool - Connection pool usage high: 8/10 connections active
+2024-03-01 08:03:15.400 [http-thread-5] ERROR com.forge.service.PaymentService - Payment gateway timeout after 5000ms for orderId=9981
+2024-03-01 08:03:15.401 [http-thread-5] ERROR com.forge.service.PaymentService - Retrying payment request (attempt 1/3) for orderId=9981
+2024-03-01 08:03:20.512 [http-thread-5] ERROR com.forge.service.PaymentService - Retrying payment request (attempt 2/3) for orderId=9981
+2024-03-01 08:03:25.623 [http-thread-5] ERROR com.forge.service.PaymentService - All retry attempts exhausted for orderId=9981
+2024-03-01 08:03:25.624 [http-thread-5] ERROR com.forge.service.PaymentService - java.net.SocketTimeoutException: Read timed out
+	at java.net.SocketInputStream.socketRead0(Native Method)
+	at java.net.SocketInputStream.socketRead(SocketInputStream.java:116)
+	at com.forge.service.PaymentGatewayClient.executeRequest(PaymentGatewayClient.java:234)
+	at com.forge.service.PaymentService.processPayment(PaymentService.java:89)
+	at com.forge.api.OrderController.checkout(OrderController.java:156)
+
+2024-03-01 08:04:01.789 [http-thread-3] INFO  com.forge.api.UserController - GET /api/users/77 - 200 OK (9ms)
+2024-03-01 08:04:03.012 [http-thread-1] INFO  com.forge.api.OrderController - POST /api/orders - 201 Created (102ms)
+2024-03-01 08:04:05.345 [http-thread-6] WARN  com.forge.cache.CacheManager - Cache miss rate above threshold: 34% (threshold: 20%)
+2024-03-01 08:04:07.678 [http-thread-2] INFO  com.forge.api.ProjectController - DELETE /api/projects/17 - 204 No Content (31ms)
+2024-03-01 08:04:09.901 [http-thread-4] ERROR com.forge.service.NotificationService - Failed to send email to user@domain.com
+2024-03-01 08:04:09.902 [http-thread-4] ERROR com.forge.service.NotificationService - javax.mail.MessagingException: Could not connect to SMTP host: mail.example.com, port: 587
+	at com.sun.mail.smtp.SMTPTransport.openServer(SMTPTransport.java:2210)
+	at com.sun.mail.smtp.SMTPTransport.protocolConnect(SMTPTransport.java:740)
+	at com.forge.service.EmailSender.send(EmailSender.java:78)
+	at com.forge.service.NotificationService.notify(NotificationService.java:45)
+
+2024-03-01 08:05:00.000 [monitor-1] INFO  com.forge.monitor.HealthCheck - System health: CPU=45%, MEM=62%, DISK=38%
+2024-03-01 08:05:00.001 [monitor-1] INFO  com.forge.monitor.HealthCheck - Active threads: 24, DB connections: 6/10, Cache hit rate: 66%
+2024-03-01 08:05:00.002 [monitor-1] WARN  com.forge.monitor.HealthCheck - Memory usage trending upward: 62% → 71% over last 5 minutes
+
+2024-03-01 08:06:12.456 [http-thread-7] INFO  com.forge.api.FileController - POST /api/files/upload - 200 OK (1203ms)
+2024-03-01 08:06:15.789 [http-thread-1] DEBUG com.forge.core.LogParser - Parsing log file: /var/log/app/service.log (2.1 MB)
+2024-03-01 08:06:16.012 [http-thread-3] INFO  com.forge.api.UserController - PATCH /api/users/42 - 200 OK (55ms)
+2024-03-01 08:06:18.345 [http-thread-8] ERROR com.forge.db.DatabasePool - Query timeout exceeded (>3000ms) for query: SELECT * FROM orders WHERE status='PENDING'
+2024-03-01 08:06:18.346 [http-thread-8] ERROR com.forge.db.DatabasePool - java.sql.SQLTimeoutException: Query execution was interrupted, max_statement_time exceeded
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:129)
+	at com.forge.db.QueryExecutor.execute(QueryExecutor.java:201)
+	at com.forge.repository.OrderRepository.findPending(OrderRepository.java:67)
+	at com.forge.service.OrderService.processPendingOrders(OrderService.java:112)
+
+2024-03-01 08:07:45.678 [http-thread-2] INFO  com.forge.api.ProjectController - GET /api/projects/55 - 200 OK (18ms)
+2024-03-01 08:07:48.901 [http-thread-5] WARN  com.forge.service.RateLimiter - Rate limit warning: IP 10.0.0.88 made 95/100 requests in last 60s
+2024-03-01 08:07:51.234 [http-thread-5] ERROR com.forge.service.RateLimiter - Rate limit exceeded: IP 10.0.0.88 blocked for 300s
+2024-03-01 08:07:53.567 [http-thread-9] INFO  com.forge.api.AuthController - POST /api/auth/login - 200 OK (67ms) user=john.doe@example.com
+2024-03-01 08:07:55.890 [http-thread-6] INFO  com.forge.api.OrderController - GET /api/orders?userId=33 - 200 OK (29ms)
+
+2024-03-01 08:08:00.000 [scheduler-2] INFO  com.forge.scheduler.ReportJob - Generating daily summary report
+2024-03-01 08:08:01.234 [scheduler-2] INFO  com.forge.scheduler.ReportJob - Report generated: 1,204 requests, 7 ERRORs, 6 WARNs
+2024-03-01 08:08:01.235 [scheduler-2] INFO  com.forge.scheduler.ReportJob - Report saved to /var/reports/2024-03-01-summary.json
+
+2024-03-01 08:09:22.456 [http-thread-1] INFO  com.forge.api.UserController - GET /api/users - 200 OK (44ms)
+2024-03-01 08:09:25.789 [http-thread-3] INFO  com.forge.api.ProjectController - POST /api/projects - 201 Created (91ms)
+2024-03-01 08:09:28.012 [main] INFO  com.forge.Application - Received shutdown signal (SIGTERM)
+2024-03-01 08:09:28.013 [main] INFO  com.forge.Application - Graceful shutdown initiated, waiting for active requests...
+2024-03-01 08:09:29.234 [main] INFO  com.forge.db.DatabasePool - Closing 6 active database connections
+2024-03-01 08:09:29.456 [main] INFO  com.forge.cache.CacheManager - Flushing cache to disk (1,204 entries)
+2024-03-01 08:09:29.789 [main] INFO  com.forge.Application - Application shutdown complete. Uptime: 9m 17s

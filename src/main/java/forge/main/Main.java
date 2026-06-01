@@ -3,7 +3,10 @@ import forge.cli.LogsCommand;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
-@Command(subcommands = {Main.toolCommand.class, Main.helpCommand.class, LogsCommand.class})
+@Command(
+        name = "forge",
+        subcommands = {Main.toolCommand.class, Main.helpCommand.class, LogsCommand.class}
+)
 public class Main implements Runnable {
     @Override
     public void run() {
@@ -29,6 +32,7 @@ public class Main implements Runnable {
     }
 
     public static void main(String[] args) {
-        new CommandLine(new Main()).execute(args);
+        int exitCode = new CommandLine(new Main()).execute(args);
+        System.exit(exitCode);
     }
 }
