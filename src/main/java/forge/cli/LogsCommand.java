@@ -135,7 +135,13 @@ public class LogsCommand implements Runnable {
                             if (logDateTime.isBefore(sinceDateTime)) continue;
                         }
                         if (filterLevel == null || level.equals(filterLevel.toUpperCase())) {
-                            System.out.println(line);
+                            String color = switch (level.toUpperCase()) {
+                                case "ERROR" -> "red";
+                                case "WARN" -> "yellow";
+                                case "DEBUG" -> "faint,italic";
+                                default -> "green";
+                            };
+                            System.out.println(picocli.CommandLine.Help.Ansi.AUTO.string("@|" + color + " " + line + "|@"));
                             filteredData.add(line);
                         }
                         String message = m.group(5);
