@@ -28,11 +28,14 @@ public class LogsCommand implements Runnable {
         private boolean check = false;
         private String compare;
 
-        @Option(names = {"--level"}, description = "Filter logs by severity level (e.g. INFO, WARN, ERROR, DEBUG)")
+        @Option(names = {"--level", "-l"}, description = "Filter logs by severity level (e.g. INFO, WARN, ERROR, DEBUG)")
         private String filterLevel;
 
-        @Option(names = {"--since"}, description = "Filter logs after a specific timestamp. Formats: 'yyyy-MM-dd' or 'yyyy-MM-ddTHH:mm:ss'")
+        @Option(names = {"--since", "-t"}, description = "Filter logs after a specific timestamp. Formats: 'yyyy-MM-dd' or 'yyyy-MM-ddTHH:mm:ss'")
         private String since;
+
+        @Option(names = {"--output", "--out"}, description = "DESCRIPTION OUTPUT")
+        private String output;
 
         @Override
         public void run() {
@@ -55,8 +58,8 @@ public class LogsCommand implements Runnable {
                 }
             }
                 catch (FileNotFoundException e) {
-                    System.out.println("File not found!");
-                    // e.printStackTrace();
+                    System.err.println("File not found!");
+                    e.printStackTrace();
                 }
             }
 
@@ -122,6 +125,10 @@ public class LogsCommand implements Runnable {
             } catch (IOException e) {
                 System.err.println("Error: cannot read file: " + file.getName());
             }
+        }
+
+        public static void saveOutput(File file) {
+
         }
 }
 
