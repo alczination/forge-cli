@@ -1,0 +1,7 @@
+2024-03-01 08:01:11.890 [http-thread-3] WARN  com.forge.api.AuthController - Failed login attempt for user: admin@example.com (attempt 1/5)
+2024-03-01 08:01:14.123 [http-thread-3] WARN  com.forge.api.AuthController - Failed login attempt for user: admin@example.com (attempt 2/5)
+2024-03-01 08:01:18.789 [http-thread-3] WARN  com.forge.api.AuthController - Failed login attempt for user: admin@example.com (attempt 3/5)
+2024-03-01 08:03:14.233 [http-thread-1] WARN  com.forge.db.DatabasePool - Connection pool usage high: 8/10 connections active
+2024-03-01 08:04:05.345 [http-thread-6] WARN  com.forge.cache.CacheManager - Cache miss rate above threshold: 34% (threshold: 20%)
+2024-03-01 08:05:00.002 [monitor-1] WARN  com.forge.monitor.HealthCheck - Memory usage trending upward: 62% → 71% over last 5 minutes
+2024-03-01 08:07:48.901 [http-thread-5] WARN  com.forge.service.RateLimiter - Rate limit warning: IP 10.0.0.88 made 95/100 requests in last 60s

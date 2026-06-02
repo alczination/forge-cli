@@ -1,16 +1,18 @@
 package forge.cli;
-
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 import java.io.BufferedReader;
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.regex.*;
@@ -20,7 +22,6 @@ public class LogsCommand implements Runnable {
     static Pattern LOG_PATTERN = Pattern.compile(
             "^(\\d{4}-\\d{2}-\\d{2}) (\\d{2}:\\d{2}:\\d{2}\\.\\d{3}) \\[(.+?)\\] (INFO|WARN|ERROR|DEBUG) (.+)$"
     );
-
         @Option(names = {"--file"}, required = true, description = "The path to the log file to be processed.")
         private File filePath;
 
@@ -31,8 +32,17 @@ public class LogsCommand implements Runnable {
         @Option(names = {"--level", "-l"}, description = "Filter logs by severity level (e.g. INFO, WARN, ERROR, DEBUG)")
         private String filterLevel;
 
+        @Option(names = {"--exclude", "-x"}, description = "DESCRIPTION EXCLUDE")
+        private String filterExclude;
+
+        @Option(names = {"--grep"}, description = "DESCRIPTION GREP")
+        private String filterGrep;
+
         @Option(names = {"--since", "-t"}, description = "Filter logs after a specific timestamp. Formats: 'yyyy-MM-dd' or 'yyyy-MM-ddTHH:mm:ss'")
         private String since;
+
+        @Option(names = {"--until", "-u"}, description = "DESCRIPTION UNTIL")
+        private String until;
 
         @Option(names = {"--output", "--out"}, description = "DESCRIPTION OUTPUT")
         private String output;
@@ -40,11 +50,17 @@ public class LogsCommand implements Runnable {
         @Override
         public void run() {
             if (filePath != null)
-                System.out.println("Selected file: " + filePath);
+                System.out.println("Selected file: " + filePath); // Debug
             if (compare != null) {
-                System.out.println("Selected compare: " + compare);
+                System.out.println("Selected compare: " + compare); // Debug
                 compareData(filePath, compare);
-            } else if (filterLevel != null || since != null) {
+            }
+            if (output != null) {
+                List<String> filteredData = filterLogs(filePath, filterLevel, since);
+                saveOutput(filteredData, output);
+            }
+            else if (filterLevel != null || since != null) {
+                // Debug
                 System.out.println("Selected filter level: " + filterLevel);
                 filterLogs(filePath, filterLevel, since);
             }
@@ -82,7 +98,8 @@ public class LogsCommand implements Runnable {
             }
         }
 
-        public static void filterLogs(File file, String filterLevel, String since) {
+        public static List<String> filterLogs(File file, String filterLevel, String since) {
+            List<String> filteredData = new ArrayList<>();
             LocalDateTime sinceDateTime = null;
             if (since != null) {
                 try {
@@ -96,7 +113,7 @@ public class LogsCommand implements Runnable {
                     }
                          catch (Exception e2) {
                             System.err.println("Error: invalid time format. Use 'yyyy-MM-ddTHH:mm:ss' or 'yyyy-MM-dd'.'");
-                            return;
+                            return filteredData;
                         }
                     }
                 }
@@ -104,7 +121,7 @@ public class LogsCommand implements Runnable {
             if (filterLevel != null && !VALID_LEVELS.contains(filterLevel.toUpperCase())) {
                 System.err.println("Invalid filter level: " + filterLevel);
                 System.err.println("Valid levels: " + VALID_LEVELS);
-                return;
+                return filteredData;
             }
             try (BufferedReader reader = Files.newBufferedReader(file.toPath())) {
                 String line;
@@ -117,18 +134,30 @@ public class LogsCommand implements Runnable {
                             LocalDateTime logDateTime = LocalDateTime.parse(m.group(1) + " " + m.group(2), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
                             if (logDateTime.isBefore(sinceDateTime)) continue;
                         }
-                        if (filterLevel == null || level.equals(filterLevel.toUpperCase()))
+                        if (filterLevel == null || level.equals(filterLevel.toUpperCase())) {
                             System.out.println(line);
+                            filteredData.add(line);
+                        }
                         String message = m.group(5);
                     }
                 }
             } catch (IOException e) {
                 System.err.println("Error: cannot read file: " + file.getName());
             }
+            return filteredData;
         }
 
-        public static void saveOutput(File file) {
-
+        public static void saveOutput(List<String> filteredData, String fileName) {
+            try (FileOutputStream fos = new FileOutputStream(fileName);
+                 BufferedOutputStream bos = new BufferedOutputStream(fos)) {
+                String data = String.join(System.lineSeparator(), filteredData);
+                byte[] bytes = data.getBytes();
+                bos.write(bytes);
+                // Debug
+                System.out.println("Data written to file sucessfully");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 }
 
