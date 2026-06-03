@@ -43,7 +43,7 @@ public class LogsCommand implements Runnable {
     private String output;
 
     @Option(names = {"--stats"}, description = "DESCRIPTION STATS")
-    private String stats;
+    private boolean stats = false;
 
     @Override
     public void run() {
@@ -52,6 +52,10 @@ public class LogsCommand implements Runnable {
         if (compare != null) {
             System.out.println("Selected compare: " + compare); // Debug
             compareData(filePath, compare);
+        }
+        if (stats) {
+            statsLogs(filePath);
+            return;
         }
         List<String> filteredData = filterLogs(filePath);
         if (output != null && !filteredData.isEmpty()) {
@@ -86,6 +90,20 @@ public class LogsCommand implements Runnable {
             }
         } catch (FileNotFoundException e) {
             System.out.println("File not found!");
+        }
+    }
+
+    private LocalDateTime parseDate(String dateStr) {
+        if (dateStr == null) return null;
+        try {
+            return LocalDateTime.parse(dateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+        } catch (Exception e1) {
+            try {
+                return LocalDate.parse(dateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd")).atStartOfDay();
+            } catch (Exception e2) {
+                System.err.println("Error: invalid time format: " + dateStr + "'. Use 'yyyy-MM-ddTHH:mm:ss' or 'yyyy-MM-dd'.");
+                return null;
+            }
         }
     }
 
@@ -138,17 +156,41 @@ public class LogsCommand implements Runnable {
         }
     }
 
-    private LocalDateTime parseDate(String dateStr) {
-        if (dateStr == null) return null;
-        try {
-            return LocalDateTime.parse(dateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
-        } catch (Exception e1) {
-            try {
-                return LocalDate.parse(dateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd")).atStartOfDay();
-            } catch (Exception e2) {
-                System.err.println("Error: invalid time format: " + dateStr + "'. Use 'yyyy-MM-ddTHH:mm:ss' or 'yyyy-MM-dd'.");
-                return null;
+    public static void statsLogs(File file) {
+        try (BufferedReader reader = Files.newBufferedReader(file.toPath())) {
+
+            String line;
+            int count = 0;
+            int info_counter = 0;
+            int err_counter = 0;
+            int warn_counter = 0;
+            int debug_counter = 0;
+
+            while ((line = reader.readLine()) != null) {
+                count++;
+                Matcher m = LOG_PATTERN.matcher(line);
+                if (!m.matches()) continue;
+                String thread = m.group(3);
+                String level = m.group(4);
+                if (level.equals("INFO")) info_counter++;
+                if (level.equals("ERROR")) err_counter++;
+                if (level.equals("WARN")) warn_counter++;
+                if (level.equals("DEBUG")) debug_counter++;
+                String message = m.group(5);
+            }
+
+            System.out.println("Total lines: " + count);
+            System.out.println("------------");
+            System.out.println("INFO: " + info_counter);
+            System.out.println("ERROR: " + err_counter);
+            System.out.println("WARN: " + warn_counter);
+            System.out.println("DEBUG: " + debug_counter);
+            System.out.println("------------");
+            System.out.println("First entry: ");
+            System.out.println("Last entry: ");
+
+            } catch (IOException e) {
+                System.err.println("Error: cannot read file: " + file.getName());
             }
         }
-    }
 }
