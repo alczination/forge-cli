@@ -1,4 +1,5 @@
 package forge.cli;
+import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -9,7 +10,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 import java.util.regex.*;
 
 @Command(name = "logs", description = "View, filter and analyze application log files.")
@@ -17,12 +17,9 @@ public class LogsCommand implements Runnable {
     static Pattern LOG_PATTERN = Pattern.compile(
             "^(\\d{4}-\\d{2}-\\d{2}) (\\d{2}:\\d{2}:\\d{2}\\.\\d{3}) \\[(.+?)\\] (INFO|WARN|ERROR|DEBUG) (.+)$"
     );
-    @Option(names = {"--file"}, required = true, description = "The path to the log file to be processed.")
-    private File filePath;
 
-    @Option(names = {"--check"}, description = "Perform a validation check on the log file structure.")
-    private boolean check = false;
-    private String compare;
+    @Option(names = {"--file", "-f"}, required = true, description = "The path to the log file to be processed.")
+    private File filePath;
 
     @Option(names = {"--level", "-l"}, description = "Filter logs by severity level (e.g. INFO, WARN, ERROR, DEBUG)")
     private String filterLevel;
@@ -30,7 +27,7 @@ public class LogsCommand implements Runnable {
     @Option(names = {"--exclude", "-x"}, description = "Exclude logs by a specific severity level.")
     private String filterExclude;
 
-    @Option(names = {"--grep"}, description = "Filter logs containing a specific phrase or keyword.")
+    @Option(names = {"--grep", "-gr"}, description = "Filter logs containing a specific phrase or keyword.")
     private String filterGrep;
 
     @Option(names = {"--since", "-t"}, description = "Filter logs after a specific timestamp. Formats: 'yyyy-MM-dd' or 'yyyy-MM-ddTHH:mm:ss'")
@@ -39,59 +36,50 @@ public class LogsCommand implements Runnable {
     @Option(names = {"--until", "-u"}, description = "Filter logs up to a specific timestamp. Formats: 'yyyy-MM-dd' or 'yyyy-MM-ddTHH:mm:ss'.")
     private String until;
 
-    @Option(names = {"--output", "--out"}, description = "Path to the file where the filtered logs will be saved.")
+    @Option(names = {"--output", "-out"}, description = "Path to the file where the filtered logs will be saved.")
     private String output;
 
-    @Option(names = {"--stats"}, description = "DESCRIPTION STATS")
-    private boolean stats = false;
+    @Option(names = {"--stats"}, description = "Generate and display a summary report of log severities and timestamps.")
+    private boolean stats;
 
     @Override
     public void run() {
-        if (filePath != null)
-            System.out.println("Selected file: " + filePath); // Debug
-        if (compare != null) {
-            System.out.println("Selected compare: " + compare); // Debug
-            compareData(filePath, compare);
-        }
         if (stats) {
-            statsLogs(filePath);
-            return;
-        }
+            List<String> statsList = statsLogs(filePath);
+            if (output != null) {
+                saveOutput(statsList, output);
+            } else {
+                System.out.println("--------");
+                for (String s : statsList) {
+                    System.out.println(s);
+                }
+                System.out.println("--------");
+            }
+        return;
+    }
         List<String> filteredData = filterLogs(filePath);
         if (output != null && !filteredData.isEmpty()) {
             saveOutput(filteredData, output);
         }
     }
 
-//    public static void readData(File file) {
+//    public static void compareData(File file, String compare) {
+//        boolean check = false;
+//        int lineNumber = 0;
+//
 //        try (Scanner myReader = new Scanner(file)) {
 //            while (myReader.hasNextLine()) {
 //                String line = myReader.nextLine();
-//                System.out.println(line);
+//                if (line.contains(compare)) {
+//                    check = true;
+//                    System.out.println("Found comparison " + compare + "in line: " + line);
+//                }
+//                lineNumber++;
 //            }
 //        } catch (FileNotFoundException e) {
-//            System.err.println("File not found!");
-//            e.printStackTrace();
+//            System.out.println("File not found!");
 //        }
 //    }
-
-    public static void compareData(File file, String compare) {
-        boolean check = false;
-        int lineNumber = 0;
-
-        try (Scanner myReader = new Scanner(file)) {
-            while (myReader.hasNextLine()) {
-                String line = myReader.nextLine();
-                if (line.contains(compare)) {
-                    check = true;
-                    System.out.println("Found comparison " + compare + "in line: " + line);
-                }
-                lineNumber++;
-            }
-        } catch (FileNotFoundException e) {
-            System.out.println("File not found!");
-        }
-    }
 
     private LocalDateTime parseDate(String dateStr) {
         if (dateStr == null) return null;
@@ -134,7 +122,7 @@ public class LogsCommand implements Runnable {
                     case "DEBUG", "TRACE" -> "faint,italic";
                     default -> "green";
                 };
-                System.out.println(picocli.CommandLine.Help.Ansi.AUTO.string("@|" + color + " " + line + "|@"));
+                System.out.println(CommandLine.Help.Ansi.AUTO.string("@|" + color + " " + line + "|@"));
                 filteredData.add(line);
             }
         } catch (IOException e) {
@@ -156,10 +144,13 @@ public class LogsCommand implements Runnable {
         }
     }
 
-    public static void statsLogs(File file) {
-        try (BufferedReader reader = Files.newBufferedReader(file.toPath())) {
+    public List<String> statsLogs(File file) {
+        List<String> statsData = new ArrayList<>();
 
+        try (BufferedReader reader = Files.newBufferedReader(file.toPath())) {
             String line;
+            String firstLine = null;
+            String lastLine = null;
             int count = 0;
             int info_counter = 0;
             int err_counter = 0;
@@ -170,27 +161,35 @@ public class LogsCommand implements Runnable {
                 count++;
                 Matcher m = LOG_PATTERN.matcher(line);
                 if (!m.matches()) continue;
+                String timestamp = m.group(1) + " " + m.group(2);
+                if (firstLine == null) firstLine = timestamp;
+                lastLine = timestamp;
+                LocalDateTime logDateTime = LocalDateTime.parse(m.group(1) + " " + m.group(2), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
                 String thread = m.group(3);
                 String level = m.group(4);
-                if (level.equals("INFO")) info_counter++;
-                if (level.equals("ERROR")) err_counter++;
-                if (level.equals("WARN")) warn_counter++;
-                if (level.equals("DEBUG")) debug_counter++;
                 String message = m.group(5);
-            }
 
-            System.out.println("Total lines: " + count);
-            System.out.println("------------");
-            System.out.println("INFO: " + info_counter);
-            System.out.println("ERROR: " + err_counter);
-            System.out.println("WARN: " + warn_counter);
-            System.out.println("DEBUG: " + debug_counter);
-            System.out.println("------------");
-            System.out.println("First entry: ");
-            System.out.println("Last entry: ");
+                switch (level.toUpperCase()) {
+                    case "INFO" -> info_counter++;
+                    case "WARN" -> warn_counter++;
+                    case "DEBUG" -> debug_counter++;
+                    case "ERROR" -> err_counter++;
+                }
+
+            }
+            statsData.add(
+                      "Total lines: " + count + "\n"
+                    + "INFO: " + info_counter + "\n"
+                    + "WARN: " + warn_counter + "\n"
+                    + "DEBUG: " + debug_counter + "\n"
+                    + "ERROR: " + err_counter + "\n"
+                    + "First entry: " + firstLine + "\n"
+                    + "Last entry: " + lastLine
+            );
 
             } catch (IOException e) {
                 System.err.println("Error: cannot read file: " + file.getName());
             }
+        return statsData;
         }
 }
