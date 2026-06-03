@@ -1,0 +1,5 @@
+2024-03-01 08:01:05.001 [http-thread-1] INFO  com.forge.api.UserController - GET /api/users?page=0&size=20 - 200 OK (34ms)
+2024-03-01 08:01:09.567 [http-thread-1] INFO  com.forge.api.UserController - POST /api/users - 201 Created (88ms)
+2024-03-01 08:04:01.789 [http-thread-3] INFO  com.forge.api.UserController - GET /api/users/77 - 200 OK (9ms)
+2024-03-01 08:06:16.012 [http-thread-3] INFO  com.forge.api.UserController - PATCH /api/users/42 - 200 OK (55ms)
+2024-03-01 08:09:22.456 [http-thread-1] INFO  com.forge.api.UserController - GET /api/users - 200 OK (44ms)

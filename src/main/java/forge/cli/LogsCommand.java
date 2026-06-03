@@ -2,12 +2,7 @@ package forge.cli;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
-import java.io.BufferedReader;
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -22,148 +17,138 @@ public class LogsCommand implements Runnable {
     static Pattern LOG_PATTERN = Pattern.compile(
             "^(\\d{4}-\\d{2}-\\d{2}) (\\d{2}:\\d{2}:\\d{2}\\.\\d{3}) \\[(.+?)\\] (INFO|WARN|ERROR|DEBUG) (.+)$"
     );
-        @Option(names = {"--file"}, required = true, description = "The path to the log file to be processed.")
-        private File filePath;
+    @Option(names = {"--file"}, required = true, description = "The path to the log file to be processed.")
+    private File filePath;
 
-        @Option(names = {"--check"}, description = "Perform a validation check on the log file structure")
-        private boolean check = false;
-        private String compare;
+    @Option(names = {"--check"}, description = "Perform a validation check on the log file structure.")
+    private boolean check = false;
+    private String compare;
 
-        @Option(names = {"--level", "-l"}, description = "Filter logs by severity level (e.g. INFO, WARN, ERROR, DEBUG)")
-        private String filterLevel;
+    @Option(names = {"--level", "-l"}, description = "Filter logs by severity level (e.g. INFO, WARN, ERROR, DEBUG)")
+    private String filterLevel;
 
-        @Option(names = {"--exclude", "-x"}, description = "DESCRIPTION EXCLUDE")
-        private String filterExclude;
+    @Option(names = {"--exclude", "-x"}, description = "Exclude logs by a specific severity level.")
+    private String filterExclude;
 
-        @Option(names = {"--grep"}, description = "DESCRIPTION GREP")
-        private String filterGrep;
+    @Option(names = {"--grep"}, description = "Filter logs containing a specific phrase or keyword.")
+    private String filterGrep;
 
-        @Option(names = {"--since", "-t"}, description = "Filter logs after a specific timestamp. Formats: 'yyyy-MM-dd' or 'yyyy-MM-ddTHH:mm:ss'")
-        private String since;
+    @Option(names = {"--since", "-t"}, description = "Filter logs after a specific timestamp. Formats: 'yyyy-MM-dd' or 'yyyy-MM-ddTHH:mm:ss'")
+    private String since;
 
-        @Option(names = {"--until", "-u"}, description = "DESCRIPTION UNTIL")
-        private String until;
+    @Option(names = {"--until", "-u"}, description = "Filter logs up to a specific timestamp. Formats: 'yyyy-MM-dd' or 'yyyy-MM-ddTHH:mm:ss'.")
+    private String until;
 
-        @Option(names = {"--output", "--out"}, description = "DESCRIPTION OUTPUT")
-        private String output;
+    @Option(names = {"--output", "--out"}, description = "Path to the file where the filtered logs will be saved.")
+    private String output;
 
-        @Override
-        public void run() {
-            if (filePath != null)
-                System.out.println("Selected file: " + filePath); // Debug
-            if (compare != null) {
-                System.out.println("Selected compare: " + compare); // Debug
-                compareData(filePath, compare);
+    @Option(names = {"--stats"}, description = "DESCRIPTION STATS")
+    private String stats;
+
+    @Override
+    public void run() {
+        if (filePath != null)
+            System.out.println("Selected file: " + filePath); // Debug
+        if (compare != null) {
+            System.out.println("Selected compare: " + compare); // Debug
+            compareData(filePath, compare);
+        }
+        List<String> filteredData = filterLogs(filePath);
+        if (output != null && !filteredData.isEmpty()) {
+            saveOutput(filteredData, output);
+        }
+    }
+
+//    public static void readData(File file) {
+//        try (Scanner myReader = new Scanner(file)) {
+//            while (myReader.hasNextLine()) {
+//                String line = myReader.nextLine();
+//                System.out.println(line);
+//            }
+//        } catch (FileNotFoundException e) {
+//            System.err.println("File not found!");
+//            e.printStackTrace();
+//        }
+//    }
+
+    public static void compareData(File file, String compare) {
+        boolean check = false;
+        int lineNumber = 0;
+
+        try (Scanner myReader = new Scanner(file)) {
+            while (myReader.hasNextLine()) {
+                String line = myReader.nextLine();
+                if (line.contains(compare)) {
+                    check = true;
+                    System.out.println("Found comparison " + compare + "in line: " + line);
+                }
+                lineNumber++;
             }
-            if (output != null) {
-                List<String> filteredData = filterLogs(filePath, filterLevel, since);
-                saveOutput(filteredData, output);
+        } catch (FileNotFoundException e) {
+            System.out.println("File not found!");
+        }
+    }
+
+    private List<String> filterLogs(File file) {
+        List<String> filteredData = new ArrayList<>();
+        LocalDateTime sinceDateTime = parseDate(since);
+        LocalDateTime untilDateTime = parseDate(until);
+
+        try (BufferedReader reader = Files.newBufferedReader(file.toPath())) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                Matcher m = LOG_PATTERN.matcher(line);
+                if (!m.matches()) continue;
+                String thread = m.group(3);
+                String level = m.group(4);
+                String message = m.group(5);
+                LocalDateTime logDateTime = LocalDateTime.parse(m.group(1) + " " + m.group(2), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
+
+                if (sinceDateTime != null && logDateTime.isBefore(sinceDateTime)) continue;
+                if (untilDateTime != null && logDateTime.isAfter(untilDateTime)) continue;
+                if (filterExclude != null && level.equalsIgnoreCase(filterExclude)) continue;
+                if (filterLevel != null && !level.equalsIgnoreCase(filterLevel)) continue;
+                if (filterGrep != null && !line.contains(filterGrep)) continue;
+
+                String color = switch (level.toUpperCase()) {
+                    case "ERROR", "FATAL" -> "red";
+                    case "WARN" -> "yellow";
+                    case "DEBUG", "TRACE" -> "faint,italic";
+                    default -> "green";
+                };
+                System.out.println(picocli.CommandLine.Help.Ansi.AUTO.string("@|" + color + " " + line + "|@"));
+                filteredData.add(line);
             }
-            else if (filterLevel != null || since != null) {
-                // Debug
-                System.out.println("Selected filter level: " + filterLevel);
-                filterLogs(filePath, filterLevel, since);
+        } catch (IOException e) {
+            System.err.println("Error: cannot read file: " + file.getName());
+        }
+        return filteredData;
+    }
+
+    public static void saveOutput(List<String> filteredData, String fileName) {
+        try (FileOutputStream fos = new FileOutputStream(fileName);
+             BufferedOutputStream bos = new BufferedOutputStream(fos)) {
+            String data = String.join(System.lineSeparator(), filteredData);
+            byte[] bytes = data.getBytes();
+            bos.write(bytes);
+            // Debug
+            System.out.println("Data written to file sucessfully");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private LocalDateTime parseDate(String dateStr) {
+        if (dateStr == null) return null;
+        try {
+            return LocalDateTime.parse(dateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+        } catch (Exception e1) {
+            try {
+                return LocalDate.parse(dateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd")).atStartOfDay();
+            } catch (Exception e2) {
+                System.err.println("Error: invalid time format: " + dateStr + "'. Use 'yyyy-MM-ddTHH:mm:ss' or 'yyyy-MM-dd'.");
+                return null;
             }
         }
-
-        public static void readData (File file) {
-            try (Scanner myReader = new Scanner(file)) {
-                while (myReader.hasNextLine()) {
-                    String line = myReader.nextLine();
-                    System.out.println(line);
-                }
-            }
-                catch (FileNotFoundException e) {
-                    System.err.println("File not found!");
-                    e.printStackTrace();
-                }
-            }
-
-        public static void compareData (File file, String compare) {
-            boolean check = false;
-            int lineNumber = 0;
-
-            try (Scanner myReader = new Scanner(file)) {
-                while (myReader.hasNextLine()) {
-                    String line = myReader.nextLine();
-                    if (line.contains(compare)) {
-                        check = true;
-                        System.out.println("Found comparison " + compare + "in line: " + line);
-                    }
-                    lineNumber++;
-                }
-            }
-                catch (FileNotFoundException e) {
-                    System.out.println("File not found!");
-            }
-        }
-
-        public static List<String> filterLogs(File file, String filterLevel, String since) {
-            List<String> filteredData = new ArrayList<>();
-            LocalDateTime sinceDateTime = null;
-            if (since != null) {
-                try {
-                        // Date + Hour
-                    sinceDateTime = LocalDateTime.parse(since, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
-                } catch (Exception e1) {
-                    try {
-                        // Date
-                        LocalDate date = LocalDate.parse(since, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-                        sinceDateTime = date.atStartOfDay();
-                    }
-                         catch (Exception e2) {
-                            System.err.println("Error: invalid time format. Use 'yyyy-MM-ddTHH:mm:ss' or 'yyyy-MM-dd'.'");
-                            return filteredData;
-                        }
-                    }
-                }
-            List<String> VALID_LEVELS = List.of("INFO", "WARN", "ERROR", "DEBUG");
-            if (filterLevel != null && !VALID_LEVELS.contains(filterLevel.toUpperCase())) {
-                System.err.println("Invalid filter level: " + filterLevel);
-                System.err.println("Valid levels: " + VALID_LEVELS);
-                return filteredData;
-            }
-            try (BufferedReader reader = Files.newBufferedReader(file.toPath())) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    Matcher m = LOG_PATTERN.matcher(line);
-                    if (m.matches()) {
-                        String thread  = m.group(3);
-                        String level   = m.group(4);
-                        if (sinceDateTime != null) {
-                            LocalDateTime logDateTime = LocalDateTime.parse(m.group(1) + " " + m.group(2), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
-                            if (logDateTime.isBefore(sinceDateTime)) continue;
-                        }
-                        if (filterLevel == null || level.equals(filterLevel.toUpperCase())) {
-                            String color = switch (level.toUpperCase()) {
-                                case "ERROR" -> "red";
-                                case "WARN" -> "yellow";
-                                case "DEBUG" -> "faint,italic";
-                                default -> "green";
-                            };
-                            System.out.println(picocli.CommandLine.Help.Ansi.AUTO.string("@|" + color + " " + line + "|@"));
-                            filteredData.add(line);
-                        }
-                        String message = m.group(5);
-                    }
-                }
-            } catch (IOException e) {
-                System.err.println("Error: cannot read file: " + file.getName());
-            }
-            return filteredData;
-        }
-
-        public static void saveOutput(List<String> filteredData, String fileName) {
-            try (FileOutputStream fos = new FileOutputStream(fileName);
-                 BufferedOutputStream bos = new BufferedOutputStream(fos)) {
-                String data = String.join(System.lineSeparator(), filteredData);
-                byte[] bytes = data.getBytes();
-                bos.write(bytes);
-                // Debug
-                System.out.println("Data written to file sucessfully");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+    }
 }
-
